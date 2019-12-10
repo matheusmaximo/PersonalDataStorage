@@ -133,10 +133,14 @@ namespace DataManagement
         private async Task<List<string>> GetPatientData(string patientIdentifier)
         {
             var config = new QueryOperationConfig();
-            config.Filter = new QueryFilter();
-            config.Filter.AddCondition(nameof(DataModel.PatientId), QueryOperator.Equal, patientIdentifier);
-            config.AttributesToGet = new List<string> { nameof(DataModel.DataAsJson) };
+            config.KeyExpression = new Expression
+            {
+                ExpressionStatement = $"{nameof(DataModel.PatientId)} = :{nameof(patientIdentifier)}",
+                ExpressionAttributeNames = new Dictionary<string, string> { { nameof(DataModel.PatientId), nameof(DataModel.PatientId) }, { nameof(DataModel.CaseId), nameof(DataModel.CaseId) } },
+                ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry> { { $":{nameof(patientIdentifier)}", patientIdentifier } }
+            };
             config.Select = SelectValues.SpecificAttributes;
+            config.AttributesToGet = new List<string> { nameof(DataModel.DataAsJson) };
 
             var dataDocuments = await _dataDynamoDbTable.Query(config).GetRemainingAsync();
             if (dataDocuments == null || !dataDocuments.Any())
@@ -191,9 +195,9 @@ namespace DataManagement
 
         private void ExtractParameters(APIGatewayProxyRequest request, out string tenantId, out string patientId, out string caseId)
         {
-            tenantId = request.PathParameters[nameof(tenantId)];
-            patientId = request.PathParameters[nameof(patientId)];
-            caseId = request.PathParameters[nameof(caseId)];
+            request.PathParameters.TryGetValue(nameof(tenantId), out tenantId);
+            request.PathParameters.TryGetValue(nameof(patientId), out patientId);
+            request.PathParameters.TryGetValue(nameof(caseId), out caseId);
         }
 
         private void ValidateModel<T>(T dataToBeSaved) where T : class
