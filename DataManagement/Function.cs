@@ -132,15 +132,16 @@ namespace DataManagement
 
         private async Task<List<string>> GetPatientData(string patientIdentifier)
         {
-            var config = new QueryOperationConfig();
-            config.KeyExpression = new Expression
+            var config = new QueryOperationConfig
             {
-                ExpressionStatement = $"{nameof(DataModel.PatientId)} = :{nameof(patientIdentifier)}",
-                ExpressionAttributeNames = new Dictionary<string, string> { { nameof(DataModel.PatientId), nameof(DataModel.PatientId) }, { nameof(DataModel.CaseId), nameof(DataModel.CaseId) } },
-                ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry> { { $":{nameof(patientIdentifier)}", patientIdentifier } }
+                KeyExpression = new Expression
+                {
+                    ExpressionStatement = $"{nameof(DataModel.PatientId)} = :{nameof(patientIdentifier)}",
+                    ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry> { { $":{nameof(patientIdentifier)}", patientIdentifier } }
+                },
+                Select = SelectValues.SpecificAttributes,
+                AttributesToGet = new List<string> { nameof(DataModel.DataAsJson) }
             };
-            config.Select = SelectValues.SpecificAttributes;
-            config.AttributesToGet = new List<string> { nameof(DataModel.DataAsJson) };
 
             var dataDocuments = await _dataDynamoDbTable.Query(config).GetRemainingAsync();
             if (dataDocuments == null || !dataDocuments.Any())
